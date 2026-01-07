@@ -5,6 +5,10 @@ uv = "latest"
 [env]
 PYTHONPATH = "{{ config_root }}"
 
+[tasks."dev:setup"]
+description = "Run uv sync"
+run = "uv sync --all-extras"
+
 [tasks.dev]
 description = "Start development server"
 run = "uv run python -m app.main"
