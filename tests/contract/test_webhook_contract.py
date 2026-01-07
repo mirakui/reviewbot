@@ -24,7 +24,9 @@ class TestWebhookContract:
         """Mock environment variables."""
         return {
             "GITHUB_APP_ID": "123456",
-            "GITHUB_PRIVATE_KEY": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+            "GITHUB_PRIVATE_KEY": (
+                "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
+            ),
             "GITHUB_WEBHOOK_SECRET": webhook_secret,
             "AWS_REGION": "us-west-2",
         }

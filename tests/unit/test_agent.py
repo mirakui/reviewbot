@@ -7,6 +7,7 @@ import pytest
 
 from app.agent.prompts import build_review_prompt, build_system_prompt
 from app.agent.reviewer import ReviewAgent, ReviewResult
+from app.models.comment import Category, CommentType, ReviewComment, Severity
 from app.models.config import AgentConfig
 from app.models.file_diff import FileDiff, FileStatus
 from app.models.pull_request import PullRequest
@@ -202,7 +203,6 @@ class TestReviewAgent:
         self,
         sample_pr: PullRequest,
         sample_config: AgentConfig,
-        sample_files: list[FileDiff],
     ) -> None:
         """Test that agent creates a summary comment."""
         with patch("app.agent.reviewer.Agent") as mock_agent_class:
@@ -225,8 +225,6 @@ class TestReviewResult:
 
     def test_review_result_with_comments(self) -> None:
         """Test creating a review result with comments."""
-        from app.models.comment import Category, CommentType, ReviewComment, Severity
-
         comments = [
             ReviewComment(
                 body="Found issue",

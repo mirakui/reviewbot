@@ -1,12 +1,17 @@
 """Unit tests for structured JSON logging."""
 
+from __future__ import annotations
+
 import json
 import logging
+import sys
 from io import StringIO
-
-import pytest
+from typing import TYPE_CHECKING
 
 from app.utils.logging import JsonFormatter, configure_logging, get_logger
+
+if TYPE_CHECKING:
+    import pytest
 
 
 class TestJsonFormatter:
@@ -60,8 +65,6 @@ class TestJsonFormatter:
         try:
             raise ValueError("Test error")
         except ValueError:
-            import sys
-
             exc_info = sys.exc_info()
 
         record = logging.LogRecord(
