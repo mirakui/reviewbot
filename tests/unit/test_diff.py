@@ -107,7 +107,7 @@ class TestExtractChangedLines:
  also existing"""
 
         lines = extract_changed_lines(patch)
-        added = [l for l in lines if l.change_type == LineChangeType.ADDED]
+        added = [line for line in lines if line.change_type == LineChangeType.ADDED]
 
         assert len(added) == 2
         assert added[0].new_line_number == 2
@@ -124,7 +124,7 @@ class TestExtractChangedLines:
  also existing"""
 
         lines = extract_changed_lines(patch)
-        removed = [l for l in lines if l.change_type == LineChangeType.REMOVED]
+        removed = [line for line in lines if line.change_type == LineChangeType.REMOVED]
 
         assert len(removed) == 2
         assert removed[0].old_line_number == 2
@@ -142,8 +142,8 @@ class TestExtractChangedLines:
         lines = extract_changed_lines(patch)
 
         assert len(lines) == 2
-        removed = [l for l in lines if l.change_type == LineChangeType.REMOVED]
-        added = [l for l in lines if l.change_type == LineChangeType.ADDED]
+        removed = [line for line in lines if line.change_type == LineChangeType.REMOVED]
+        added = [line for line in lines if line.change_type == LineChangeType.ADDED]
 
         assert len(removed) == 1
         assert len(added) == 1
@@ -162,7 +162,7 @@ class TestExtractChangedLines:
  line 14"""
 
         lines = extract_changed_lines(patch)
-        added = [l for l in lines if l.change_type == LineChangeType.ADDED]
+        added = [line for line in lines if line.change_type == LineChangeType.ADDED]
 
         assert len(added) == 1
         assert added[0].new_line_number == 12

@@ -1,11 +1,17 @@
 """Pytest configuration and shared fixtures."""
 
+from __future__ import annotations
+
+import hashlib
+import hmac
 import os
-from collections.abc import Generator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +28,9 @@ def mock_env() -> dict[str, str]:
     """Standard environment variables for testing."""
     return {
         "GITHUB_APP_ID": "123456",
-        "GITHUB_PRIVATE_KEY": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+        "GITHUB_PRIVATE_KEY": (
+            "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
+        ),
         "GITHUB_WEBHOOK_SECRET": "test-webhook-secret",
         "AWS_REGION": "us-west-2",
         "LOG_LEVEL": "DEBUG",
@@ -90,7 +98,9 @@ def sample_file_diff() -> dict[str, Any]:
         "additions": 10,
         "deletions": 5,
         "sha": "abc123def456abc123def456abc123def456abc1",
-        "patch": "@@ -1,5 +1,10 @@\n def hello():\n-    return 'Hello'\n+    return 'Hello, World!'",
+        "patch": (
+            "@@ -1,5 +1,10 @@\n def hello():\n-    return 'Hello'\n+    return 'Hello, World!'"
+        ),
     }
 
 
@@ -113,9 +123,6 @@ def mock_bedrock_client() -> MagicMock:
 @pytest.fixture
 def webhook_signature(mock_env: dict[str, str]) -> str:
     """Generate a valid webhook signature for testing."""
-    import hashlib
-    import hmac
-
     secret = mock_env["GITHUB_WEBHOOK_SECRET"]
     body = b'{"test": "payload"}'
     signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()

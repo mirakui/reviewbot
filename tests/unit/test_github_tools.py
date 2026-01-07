@@ -1,8 +1,10 @@
 """Unit tests for GitHub API tools."""
 
+import base64
 from unittest.mock import MagicMock, patch
 
 import pytest
+from github import GithubException
 
 from app.tools.github import (
     GitHubToolError,
@@ -17,7 +19,7 @@ from app.tools.github import (
 class TestCreateGitHubClient:
     """Tests for GitHub client creation."""
 
-    def test_create_client_with_valid_credentials(self, set_mock_env: None) -> None:
+    def test_create_client_with_valid_credentials(self, set_mock_env: None) -> None:  # noqa: ARG002
         """Test creating client with valid credentials."""
         with patch("app.tools.github.GithubIntegration") as mock_integration:
             mock_github = MagicMock()
@@ -79,8 +81,6 @@ class TestGetPrMetadata:
 
     def test_get_metadata_pr_not_found(self) -> None:
         """Test handling PR not found error."""
-        from github import GithubException
-
         mock_client = MagicMock()
         mock_repo = MagicMock()
         mock_repo.get_pull.side_effect = GithubException(404, {"message": "Not Found"}, {})
@@ -206,8 +206,6 @@ class TestGetFileContent:
 
     def test_get_content_success(self) -> None:
         """Test getting file content successfully."""
-        import base64
-
         mock_client = MagicMock()
         content = "print('hello')"
         mock_content = MagicMock()
@@ -231,8 +229,6 @@ class TestGetFileContent:
 
     def test_get_content_file_not_found(self) -> None:
         """Test handling file not found."""
-        from github import GithubException
-
         mock_client = MagicMock()
         mock_repo = MagicMock()
         mock_repo.get_contents.side_effect = GithubException(404, {"message": "Not Found"}, {})

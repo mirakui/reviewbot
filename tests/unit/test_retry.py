@@ -1,5 +1,6 @@
 """Unit tests for retry with backoff utility."""
 
+import time
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -23,7 +24,7 @@ class TestRetryConfig:
         assert config.base_delay == 1.0
         assert config.max_delay == 60.0
         assert config.exponential_base == 2.0
-        assert config.jitter == True
+        assert config.jitter is True
 
     def test_custom_config(self) -> None:
         """Test custom retry configuration."""
@@ -39,7 +40,7 @@ class TestRetryConfig:
         assert config.base_delay == 0.5
         assert config.max_delay == 30.0
         assert config.exponential_base == 3.0
-        assert config.jitter == False
+        assert config.jitter is False
 
 
 class TestRetryWithBackoff:
@@ -88,12 +89,10 @@ class TestRetryWithBackoff:
     def test_exponential_backoff_delay(self) -> None:
         """Test that delays increase exponentially."""
         delays: list[float] = []
-        original_sleep = __import__("time").sleep
+        original_sleep = time.sleep
 
         def mock_sleep(seconds: float) -> None:
             delays.append(seconds)
-
-        import time
 
         time.sleep = mock_sleep
 
@@ -118,8 +117,6 @@ class TestRetryWithBackoff:
 
         def mock_sleep(seconds: float) -> None:
             delays.append(seconds)
-
-        import time
 
         original_sleep = time.sleep
         time.sleep = mock_sleep

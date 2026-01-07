@@ -24,7 +24,9 @@ class TestWebhookFlow:
         """Mock environment variables."""
         return {
             "GITHUB_APP_ID": "123456",
-            "GITHUB_PRIVATE_KEY": "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----",
+            "GITHUB_PRIVATE_KEY": (
+                "-----BEGIN RSA PRIVATE KEY-----\ntest\n-----END RSA PRIVATE KEY-----"
+            ),
             "GITHUB_WEBHOOK_SECRET": webhook_secret,
             "AWS_REGION": "us-west-2",
         }
@@ -203,7 +205,6 @@ class TestWebhookFlow:
         mock_env: dict[str, str],
         webhook_secret: str,
         sample_pr_payload: dict[str, Any],
-        caplog: pytest.LogCaptureFixture,
     ) -> None:
         """Test that proper logging occurs during webhook flow."""
         with patch.dict("os.environ", mock_env), patch("app.main.trigger_review") as mock_trigger:

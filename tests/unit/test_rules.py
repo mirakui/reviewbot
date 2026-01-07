@@ -26,7 +26,7 @@ class TestReviewRule:
 
     def test_rule_requires_md_extension(self) -> None:
         """Test that source_file must end with .md."""
-        with pytest.raises(ValueError, match=".md"):
+        with pytest.raises(ValueError, match=r"\.md"):
             ReviewRule(
                 source_file="rules.txt",
                 content="Some content",
