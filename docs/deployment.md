@@ -197,17 +197,23 @@ curl -X POST http://localhost:8080/invocations \
 
 ### Step 1: Install AgentCore CLI
 
+The CLI is included in the dev dependencies. Install with:
+
 ```bash
-uv pip install bedrock-agentcore-starter-toolkit
+# Using mise (recommended)
+mise run dev:setup
+
+# Or manually with uv
+uv sync --all-extras
 
 # Verify installation
-agentcore --help
+uv run agentcore --help
 ```
 
 ### Step 2: Configure AgentCore
 
 ```bash
-agentcore configure -e app/agentcore.py -r us-west-2
+uv run agentcore configure -e app/agentcore.py -r us-west-2
 ```
 
 This creates a `.bedrock_agentcore.yaml` configuration file. You can customize it:
@@ -238,10 +244,10 @@ export GITHUB_PRIVATE_KEY="$(cat /path/to/private-key.pem)"
 
 ```bash
 # Default deployment (recommended - uses CodeBuild, no Docker required)
-agentcore launch
+uv run agentcore launch
 
 # Alternative: Local build (requires Docker)
-agentcore launch --local-build
+uv run agentcore launch --local-build
 ```
 
 Deployment takes 2-5 minutes. Note the **Agent ARN** from the output:
@@ -254,10 +260,10 @@ Agent ARN: arn:aws:bedrock-agentcore:us-west-2:123456789012:agent-runtime/review
 
 ```bash
 # Check deployment status
-agentcore status
+uv run agentcore status
 
 # Test the deployed agent
-agentcore invoke '{"prompt": "Hello!"}'
+uv run agentcore invoke '{"prompt": "Hello!"}'
 ```
 
 ### Custom Execution Role (Optional)
@@ -265,7 +271,7 @@ agentcore invoke '{"prompt": "Hello!"}'
 If you need specific IAM permissions:
 
 ```bash
-agentcore configure -e app/agentcore.py --execution-role arn:aws:iam::123456789012:role/ReviewBotRole
+uv run agentcore configure -e app/agentcore.py --execution-role arn:aws:iam::123456789012:role/ReviewBotRole
 ```
 
 ## Webhook Configuration
@@ -288,7 +294,7 @@ AgentCore Gateway provides a managed webhook endpoint:
 
 ```bash
 # Configure gateway for your agent
-agentcore gateway configure --webhook-path /github/webhook
+uv run agentcore gateway configure --webhook-path /github/webhook
 ```
 
 This provides a public endpoint like:
@@ -438,7 +444,7 @@ export STRANDS_DEBUG=1
 Remove the deployed agent and associated resources:
 
 ```bash
-agentcore destroy
+uv run agentcore destroy
 ```
 
 This removes:
