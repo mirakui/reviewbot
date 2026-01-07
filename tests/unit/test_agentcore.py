@@ -1,7 +1,13 @@
 """Unit tests for AgentCore entrypoint."""
 
+import hashlib
+import hmac
+import json
+import os
 from typing import Any
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestAgentCoreApp:
@@ -239,3 +245,204 @@ class TestReviewPR:
 
             assert "summary" in result
             assert "files_reviewed" in result
+
+
+class TestHandleWebhook:
+    """Tests for the handle_webhook function."""
+
+    @pytest.fixture
+    def webhook_secret(self) -> str:
+        """Webhook secret for testing."""
+        return "test-webhook-secret"
+
+    @pytest.fixture
+    def set_webhook_env(self, webhook_secret: str) -> None:
+        """Set webhook environment variables."""
+        os.environ["GITHUB_WEBHOOK_SECRET"] = webhook_secret
+
+    def _create_signature(self, body: bytes, secret: str) -> str:
+        """Create a valid webhook signature."""
+        signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+        return f"sha256={signature}"
+
+    def test_handle_webhook_function_exists(self) -> None:
+        """Test that the handle_webhook function exists."""
+        from app.agentcore import handle_webhook  # noqa: F401, PLC0415
+
+    def test_handle_webhook_missing_secret(self) -> None:
+        """Test webhook handling when secret is not configured."""
+        # Ensure no secret is set
+        os.environ.pop("GITHUB_WEBHOOK_SECRET", None)
+
+        from app.agentcore import handle_webhook  # noqa: PLC0415
+
+        result = handle_webhook(
+            body=b'{"test": "payload"}',
+            signature="sha256=invalid",
+            event_type="ping",
+            delivery_id="test-123",
+        )
+
+        assert result["status_code"] == 500
+        assert result["error"] == "configuration_error"
+
+    def test_handle_webhook_invalid_signature(
+        self, set_webhook_env: None, webhook_secret: str
+    ) -> None:
+        """Test webhook handling with invalid signature."""
+        del set_webhook_env, webhook_secret  # fixture activates env var
+        from app.agentcore import handle_webhook  # noqa: PLC0415
+
+        result = handle_webhook(
+            body=b'{"test": "payload"}',
+            signature="sha256=invalid",
+            event_type="ping",
+            delivery_id="test-123",
+        )
+
+        assert result["status_code"] == 403
+        assert result["error"] == "invalid_signature"
+
+    def test_handle_webhook_invalid_json(self, set_webhook_env: None, webhook_secret: str) -> None:
+        """Test webhook handling with invalid JSON payload."""
+        del set_webhook_env  # fixture activates env var
+        from app.agentcore import handle_webhook  # noqa: PLC0415
+
+        body = b"not valid json"
+        signature = self._create_signature(body, webhook_secret)
+
+        result = handle_webhook(
+            body=body,
+            signature=signature,
+            event_type="ping",
+            delivery_id="test-123",
+        )
+
+        assert result["status_code"] == 400
+        assert result["error"] == "invalid_payload"
+
+    def test_handle_webhook_ping_event(self, set_webhook_env: None, webhook_secret: str) -> None:
+        """Test webhook handling for ping event."""
+        del set_webhook_env  # fixture activates env var
+        from app.agentcore import handle_webhook  # noqa: PLC0415
+
+        payload = {"zen": "Keep it simple", "hook_id": 123}
+        body = json.dumps(payload).encode()
+        signature = self._create_signature(body, webhook_secret)
+
+        result = handle_webhook(
+            body=body,
+            signature=signature,
+            event_type="ping",
+            delivery_id="test-123",
+        )
+
+        assert result["status_code"] == 200
+        assert result["status"] == "ok"
+        assert "Pong" in result["message"]
+
+    def test_handle_webhook_pr_event_triggers_review(
+        self, set_webhook_env: None, webhook_secret: str
+    ) -> None:
+        """Test webhook handling for PR event triggers review."""
+        del set_webhook_env  # fixture activates env var
+        with (
+            patch("app.agentcore.ReviewAgent") as mock_agent_class,
+            patch("app.agentcore.create_github_client") as mock_create_client,
+            patch("app.agentcore.get_pr_metadata") as mock_get_metadata,
+            patch("app.agentcore.list_pr_files") as mock_list_files,
+        ):
+            mock_agent = MagicMock()
+            mock_agent.review_file.return_value = MagicMock(
+                file_path="test.py",
+                comments=[],
+                skipped=False,
+            )
+            mock_agent.create_summary.return_value = "Review complete"
+            mock_agent_class.return_value = mock_agent
+
+            mock_create_client.return_value = MagicMock()
+            mock_get_metadata.return_value = {
+                "title": "Test PR",
+                "body": "",
+                "author": "testuser",
+                "base_branch": "main",
+                "head_branch": "feature",
+            }
+            mock_list_files.return_value = []
+
+            from app.agentcore import handle_webhook  # noqa: PLC0415
+
+            payload = {
+                "action": "opened",
+                "number": 42,
+                "pull_request": {
+                    "title": "Test PR",
+                    "body": "Test body",
+                    "user": {"login": "testuser"},
+                    "head": {
+                        "ref": "feature",
+                        "sha": "abc123def456abc123def456abc123def456abc1",
+                    },
+                    "base": {"ref": "main"},
+                    "html_url": "https://github.com/owner/repo/pull/42",
+                    "changed_files": 1,
+                    "additions": 10,
+                    "deletions": 5,
+                },
+                "repository": {"full_name": "owner/repo"},
+                "installation": {"id": 12345},
+            }
+            body = json.dumps(payload).encode()
+            signature = self._create_signature(body, webhook_secret)
+
+            result = handle_webhook(
+                body=body,
+                signature=signature,
+                event_type="pull_request",
+                delivery_id="test-123",
+            )
+
+            assert result["status_code"] == 202
+            assert result["status"] == "queued"
+            assert "review" in result
+
+
+class TestInvokeWithWebhook:
+    """Tests for invoke function with webhook payload."""
+
+    @pytest.fixture
+    def webhook_secret(self) -> str:
+        """Webhook secret for testing."""
+        return "test-webhook-secret"
+
+    @pytest.fixture
+    def set_webhook_env(self, webhook_secret: str) -> None:
+        """Set webhook environment variables."""
+        os.environ["GITHUB_WEBHOOK_SECRET"] = webhook_secret
+
+    def _create_signature(self, body: bytes, secret: str) -> str:
+        """Create a valid webhook signature."""
+        signature = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+        return f"sha256={signature}"
+
+    def test_invoke_with_webhook_body(self, set_webhook_env: None, webhook_secret: str) -> None:
+        """Test invoke with webhook payload."""
+        del set_webhook_env  # fixture activates env var
+        from app.agentcore import invoke  # noqa: PLC0415
+
+        webhook_payload = {"zen": "Keep it simple", "hook_id": 123}
+        body = json.dumps(webhook_payload).encode()
+        signature = self._create_signature(body, webhook_secret)
+
+        result = invoke(
+            {
+                "webhook_body": body.decode(),
+                "webhook_signature": signature,
+                "webhook_event_type": "ping",
+                "webhook_delivery_id": "test-123",
+            }
+        )
+
+        assert result["status_code"] == 200
+        assert result["status"] == "ok"
