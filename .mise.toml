@@ -1,0 +1,69 @@
+[tools]
+python = "3.14"
+uv = "latest"
+
+[env]
+PYTHONPATH = "{{ config_root }}"
+
+[tasks.dev]
+description = "Start development server"
+run = "uv run python -m app.main"
+
+[tasks.test]
+description = "Run all tests"
+run = "uv run pytest"
+
+[tasks."test:unit"]
+description = "Run unit tests only"
+run = "uv run pytest tests/unit/"
+
+[tasks."test:integration"]
+description = "Run integration tests"
+run = "uv run pytest tests/integration/"
+
+[tasks."test:contract"]
+description = "Run contract tests"
+run = "uv run pytest tests/contract/"
+
+[tasks."test:cov"]
+description = "Run tests with coverage"
+run = "uv run pytest --cov=app --cov-report=html --cov-report=term"
+
+[tasks.lint]
+description = "Run linter"
+run = "uv run ruff check app/ tests/"
+
+[tasks."lint:fix"]
+description = "Auto-fix lint issues"
+run = "uv run ruff check --fix app/ tests/"
+
+[tasks.format]
+description = "Format code"
+run = "uv run ruff format app/ tests/"
+
+[tasks."format:check"]
+description = "Check code formatting"
+run = "uv run ruff format --check app/ tests/"
+
+[tasks.typecheck]
+description = "Run type checker"
+run = "uv run mypy app/"
+
+[tasks.check]
+description = "Run all checks (lint + format + type)"
+run = """
+uv run ruff check app/ tests/
+uv run ruff format --check app/ tests/
+uv run mypy app/
+"""
+
+[tasks.build]
+description = "Build for deployment"
+run = "uv build"
+
+[tasks.clean]
+description = "Clean build artifacts"
+run = """
+rm -rf dist/ build/ .coverage htmlcov/ .pytest_cache/ .mypy_cache/ .ruff_cache/
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+"""

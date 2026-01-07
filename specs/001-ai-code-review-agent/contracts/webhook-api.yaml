@@ -1,0 +1,336 @@
+openapi: 3.1.0
+info:
+  title: ReviewBot Webhook API
+  description: |
+    GitHub App webhook endpoint for the AI Code Review Agent.
+    Receives webhook events from GitHub and triggers code review.
+  version: 1.0.0
+  contact:
+    name: ReviewBot
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.example.com
+    description: Production server
+  - url: http://localhost:8000
+    description: Local development
+
+paths:
+  /webhook:
+    post:
+      operationId: handleWebhook
+      summary: Handle GitHub webhook events
+      description: |
+        Receives webhook events from GitHub App installations.
+        Currently handles:
+        - `pull_request.opened`: Trigger initial review
+        - `pull_request.synchronize`: Trigger re-review (if enabled)
+      security:
+        - webhookSignature: []
+      parameters:
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          description: Type of GitHub event
+          schema:
+            type: string
+            enum: [pull_request, ping, installation]
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          description: Unique delivery ID
+          schema:
+            type: string
+            format: uuid
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          description: HMAC-SHA256 signature of payload
+          schema:
+            type: string
+            pattern: "^sha256=[a-f0-9]{64}$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/PullRequestEvent"
+                - $ref: "#/components/schemas/PingEvent"
+                - $ref: "#/components/schemas/InstallationEvent"
+      responses:
+        "200":
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "202":
+          description: Review queued for processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebhookResponse"
+        "400":
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Invalid signature
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /health:
+    get:
+      operationId: healthCheck
+      summary: Health check endpoint
+      description: Returns service health status
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+components:
+  securitySchemes:
+    webhookSignature:
+      type: apiKey
+      in: header
+      name: X-Hub-Signature-256
+      description: HMAC-SHA256 signature using webhook secret
+
+  schemas:
+    PullRequestEvent:
+      type: object
+      required:
+        - action
+        - number
+        - pull_request
+        - repository
+        - installation
+      properties:
+        action:
+          type: string
+          enum: [opened, synchronize, reopened, closed, edited]
+          description: The action that triggered the webhook
+        number:
+          type: integer
+          minimum: 1
+          description: PR number
+        pull_request:
+          $ref: "#/components/schemas/PullRequest"
+        repository:
+          $ref: "#/components/schemas/Repository"
+        sender:
+          $ref: "#/components/schemas/User"
+        installation:
+          $ref: "#/components/schemas/Installation"
+        before:
+          type: string
+          description: Previous head SHA (synchronize only)
+        after:
+          type: string
+          description: New head SHA (synchronize only)
+
+    PullRequest:
+      type: object
+      required:
+        - id
+        - number
+        - state
+        - title
+        - head
+        - base
+        - user
+        - html_url
+      properties:
+        id:
+          type: integer
+          description: GitHub PR ID
+        number:
+          type: integer
+          minimum: 1
+          description: PR number
+        state:
+          type: string
+          enum: [open, closed]
+        title:
+          type: string
+          maxLength: 500
+        body:
+          type: string
+          nullable: true
+        head:
+          $ref: "#/components/schemas/GitRef"
+        base:
+          $ref: "#/components/schemas/GitRef"
+        user:
+          $ref: "#/components/schemas/User"
+        html_url:
+          type: string
+          format: uri
+        changed_files:
+          type: integer
+          minimum: 0
+        additions:
+          type: integer
+          minimum: 0
+        deletions:
+          type: integer
+          minimum: 0
+
+    GitRef:
+      type: object
+      required:
+        - ref
+        - sha
+      properties:
+        ref:
+          type: string
+          description: Branch name
+        sha:
+          type: string
+          pattern: "^[a-f0-9]{40}$"
+          description: Commit SHA
+
+    Repository:
+      type: object
+      required:
+        - id
+        - full_name
+        - clone_url
+      properties:
+        id:
+          type: integer
+        full_name:
+          type: string
+          pattern: "^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+$"
+        clone_url:
+          type: string
+          format: uri
+        default_branch:
+          type: string
+          default: main
+
+    User:
+      type: object
+      required:
+        - login
+        - id
+      properties:
+        login:
+          type: string
+        id:
+          type: integer
+
+    Installation:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          description: GitHub App installation ID
+
+    PingEvent:
+      type: object
+      required:
+        - zen
+        - hook_id
+      properties:
+        zen:
+          type: string
+        hook_id:
+          type: integer
+        hook:
+          type: object
+          properties:
+            type:
+              type: string
+            id:
+              type: integer
+
+    InstallationEvent:
+      type: object
+      required:
+        - action
+        - installation
+      properties:
+        action:
+          type: string
+          enum: [created, deleted, suspend, unsuspend]
+        installation:
+          $ref: "#/components/schemas/Installation"
+        repositories:
+          type: array
+          items:
+            $ref: "#/components/schemas/Repository"
+
+    WebhookResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, queued, ignored]
+        message:
+          type: string
+        review_id:
+          type: string
+          format: uuid
+          description: ID for tracking the review (when queued)
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - version
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        version:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: object
+          properties:
+            bedrock:
+              type: string
+              enum: [ok, error]
+            github:
+              type: string
+              enum: [ok, error]

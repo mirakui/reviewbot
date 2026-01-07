@@ -1,0 +1,287 @@
+# Agent Tools Contract
+# Defines the tools available to the Strands review agent
+
+tools:
+  - name: get_pr_metadata
+    description: |
+      Fetch metadata about the pull request being reviewed.
+      Use this to understand the context of the changes.
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+          description: Pull request number
+        repository:
+          type: string
+          description: Repository in owner/repo format
+      required: [pr_number, repository]
+    returns:
+      type: object
+      properties:
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        author:
+          type: string
+        base_branch:
+          type: string
+        head_branch:
+          type: string
+        files_changed:
+          type: integer
+        additions:
+          type: integer
+        deletions:
+          type: integer
+
+  - name: get_file_diff
+    description: |
+      Get the diff for a specific file in the pull request.
+      Returns the unified diff patch showing added/removed lines.
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+          description: Pull request number
+        repository:
+          type: string
+          description: Repository in owner/repo format
+        file_path:
+          type: string
+          description: Path to the file in the repository
+      required: [pr_number, repository, file_path]
+    returns:
+      type: object
+      properties:
+        filename:
+          type: string
+        status:
+          type: string
+          enum: [added, removed, modified, renamed, copied]
+        patch:
+          type: string
+          nullable: true
+          description: Unified diff patch content
+        additions:
+          type: integer
+        deletions:
+          type: integer
+
+  - name: list_pr_files
+    description: |
+      List all files changed in the pull request.
+      Use this to get an overview before reviewing individual files.
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+          description: Pull request number
+        repository:
+          type: string
+          description: Repository in owner/repo format
+      required: [pr_number, repository]
+    returns:
+      type: array
+      items:
+        type: object
+        properties:
+          filename:
+            type: string
+          status:
+            type: string
+          additions:
+            type: integer
+          deletions:
+            type: integer
+
+  - name: get_file_content
+    description: |
+      Get the full content of a file at the PR head commit.
+      Use when you need more context than the diff provides.
+    parameters:
+      type: object
+      properties:
+        repository:
+          type: string
+          description: Repository in owner/repo format
+        file_path:
+          type: string
+          description: Path to the file in the repository
+        ref:
+          type: string
+          description: Git ref (branch, tag, or SHA)
+      required: [repository, file_path, ref]
+    returns:
+      type: object
+      properties:
+        content:
+          type: string
+          description: File content (decoded from base64)
+        encoding:
+          type: string
+        sha:
+          type: string
+
+  - name: get_custom_rules
+    description: |
+      Load custom review rules from the repository's .claude/rules/ directory.
+      Returns merged content of all rule files in alphabetical order.
+    parameters:
+      type: object
+      properties:
+        repository:
+          type: string
+          description: Repository in owner/repo format
+        ref:
+          type: string
+          description: Git ref to read rules from
+      required: [repository, ref]
+    returns:
+      type: object
+      properties:
+        rules_found:
+          type: boolean
+        content:
+          type: string
+          description: Merged rules content (empty if none found)
+        files_loaded:
+          type: array
+          items:
+            type: string
+
+  - name: post_review_comment
+    description: |
+      Post an inline comment on a specific line in the pull request.
+      Use for specific feedback on code changes.
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+          description: Pull request number
+        repository:
+          type: string
+          description: Repository in owner/repo format
+        body:
+          type: string
+          description: Comment text (supports markdown)
+        file_path:
+          type: string
+          description: Path to the file to comment on
+        line:
+          type: integer
+          description: Line number to comment on
+        side:
+          type: string
+          enum: [LEFT, RIGHT]
+          description: LEFT for removed lines, RIGHT for added lines
+      required: [pr_number, repository, body, file_path, line, side]
+    returns:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+
+  - name: post_summary_comment
+    description: |
+      Post a summary comment on the pull request.
+      Use for overall review findings and recommendations.
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+          description: Pull request number
+        repository:
+          type: string
+          description: Repository in owner/repo format
+        body:
+          type: string
+          description: Comment text (supports markdown)
+      required: [pr_number, repository, body]
+    returns:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+
+  - name: create_review
+    description: |
+      Create a PR review with multiple inline comments at once.
+      More efficient than posting comments individually.
+    parameters:
+      type: object
+      properties:
+        pr_number:
+          type: integer
+          description: Pull request number
+        repository:
+          type: string
+          description: Repository in owner/repo format
+        body:
+          type: string
+          description: Overall review summary
+        event:
+          type: string
+          enum: [COMMENT]
+          description: Review action (always COMMENT for this agent)
+        comments:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              line:
+                type: integer
+              side:
+                type: string
+                enum: [LEFT, RIGHT]
+              body:
+                type: string
+            required: [path, line, body]
+      required: [pr_number, repository, body, event]
+    returns:
+      type: object
+      properties:
+        id:
+          type: integer
+        state:
+          type: string
+        url:
+          type: string
+
+# Tool usage guidelines for the agent
+guidelines:
+  workflow: |
+    1. Use get_pr_metadata to understand the PR context
+    2. Use list_pr_files to get all changed files
+    3. Use get_custom_rules to load any custom review rules
+    4. For each file, use get_file_diff to analyze changes
+    5. Use create_review to post all findings at once (preferred)
+       OR use post_review_comment for individual inline comments
+    6. Always end with post_summary_comment for overall findings
+
+  best_practices:
+    - Focus on actionable feedback
+    - Be specific about line numbers and code references
+    - Categorize issues by severity (error, warning, info)
+    - Include positive feedback for good patterns
+    - Reference custom rules when applicable
+    - Avoid commenting on unchanged code
+
+  comment_format: |
+    Use markdown formatting:
+    - **Severity**: error/warning/info/praise
+    - **Category**: bug/security/performance/style/best_practice
+    - Clear description of the issue
+    - Suggested fix or improvement (when applicable)
