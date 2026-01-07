@@ -9,7 +9,7 @@ on:
 jobs:
   lint:
     name: Lint (ruff)
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
@@ -35,7 +35,7 @@ jobs:
 
   typecheck:
     name: Type Check (mypy)
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
@@ -58,7 +58,7 @@ jobs:
 
   test:
     name: Test (pytest)
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
