@@ -13,11 +13,10 @@ import json
 import os
 from typing import Any
 
-from bedrock_agentcore.runtime import BedrockAgentCoreApp
+from bedrock_agentcore.runtime import BedrockAgentCoreApp, PingStatus
 from strands import Agent
 from strands.models import BedrockModel
 
-from app import __version__
 from app.agent.prompts import build_system_prompt
 from app.agent.reviewer import ReviewAgent, ReviewResult
 from app.models.config import AgentConfig
@@ -406,17 +405,13 @@ def invoke(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.ping
-def ping() -> dict[str, Any]:
+def ping() -> PingStatus:
     """Health check endpoint for AgentCore Runtime.
 
     Returns:
-        Dictionary with health status and version.
+        PingStatus indicating the agent's health.
     """
-    return {
-        "status": "healthy",
-        "version": __version__,
-        "agent": "reviewbot",
-    }
+    return PingStatus.HEALTHY
 
 
 # For local development and testing

@@ -12,7 +12,7 @@ run = "uv sync --all-extras"
 
 [tasks.dev]
 description = "Start development server"
-run = "uv run python -m app.main"
+run = "uv run python -m app.agentcore"
 
 [tasks.test]
 description = "Run all tests"
