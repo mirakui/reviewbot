@@ -126,7 +126,7 @@ mise install
 mise run dev:setup
 
 # Or manually with uv
-uv sync --all-extras
+uv sync --dev
 ```
 
 ### Step 2: Configure Environment
@@ -204,7 +204,7 @@ The CLI is included in the dev dependencies. Install with:
 mise run dev:setup
 
 # Or manually with uv
-uv sync --all-extras
+uv sync --dev
 
 # Verify installation
 uv run agentcore --help
