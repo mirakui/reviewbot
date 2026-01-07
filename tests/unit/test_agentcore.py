@@ -181,20 +181,14 @@ class TestPingEntrypoint:
         from app.agentcore import ping  # noqa: F401, PLC0415
 
     def test_ping_returns_healthy_status(self) -> None:
-        """Test that ping returns healthy status."""
+        """Test that ping returns PingStatus.HEALTHY."""
+        from bedrock_agentcore.runtime import PingStatus  # noqa: PLC0415
+
         from app.agentcore import ping  # noqa: PLC0415
 
         result = ping()
 
-        assert result["status"] == "healthy"
-
-    def test_ping_includes_version(self) -> None:
-        """Test that ping includes version info."""
-        from app.agentcore import ping  # noqa: PLC0415
-
-        result = ping()
-
-        assert "version" in result
+        assert result == PingStatus.HEALTHY
 
 
 class TestReviewPR:
