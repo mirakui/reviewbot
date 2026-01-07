@@ -144,8 +144,11 @@ External repositories can use the reviewbot by installing it as a GitHub App, wi
 
 ## Technical Context
 
-**Language/Version**: Python 3.12+
+**Language/Version**: Python 3.14
 **Primary Dependencies**: Strands Agents SDK (strands-agents ^1.21), boto3, PyGithub
+**Package Manager**: uv
+**Linting/Formatting**: ruff (lint + format), mypy (type checking)
+**Task Runner**: mise (stack setup + local workflows)
 **AWS Services**: Bedrock AgentCore Runtime, Bedrock (model invocation)
 **Testing**: pytest with moto for AWS mocking
 **Target Platform**: AWS Lambda / serverless (webhook receiver)
