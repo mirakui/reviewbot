@@ -78,3 +78,6 @@ logs/
 # uv
 .uv/
 uv.lock
+
+# Claude Code temp files
+.cctmp/
